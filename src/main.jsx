@@ -224,6 +224,12 @@ import { AccountProvider } from './AccountContext';
 import { LanguageProvider } from './LanguageContext';
 import SaigeWidget from './SaigeWidget';
 import { useNavConfig } from './useNavConfig';
+import {
+  PRECISION_AG_ONLY,
+  PRECISION_AG_HOME,
+  isPrecisionAgAllowedPath,
+  precisionAgHomeUrl,
+} from './precisionAgMode';
 import "./AnimalAddWizard.css";
 import AnimalEdit from "./AnimalEdit";
 import MeatInventory from './MeatInventory';
@@ -460,6 +466,7 @@ const AccountSettings = lazyWithReload(() => import('./AccountSettings.jsx'))
 const AccountAssociations = lazyWithReload(() => import('./AccountAssociations.jsx'))
 const AccountTeamMembers = lazyWithReload(() => import('./AccountTeamMembers.jsx'))
 const SaigePage = lazyWithReload(() => import('./SaigePage.jsx'))
+const SaigeComingSoon = lazyWithReload(() => import('./SaigeComingSoon.jsx'))
 const CassiaPage = lazyWithReload(() => import('./CassiaPage.jsx'))
 const CompanionPlanting = lazyWithReload(() => import('./CompanionPlanting.jsx'))
 const CropNames = lazyWithReload(() => import('./CropNames.jsx'))
@@ -581,6 +588,14 @@ function RequireAuth({ children }) {
   return token ? children : <Navigate to="/login" state={{ from: location }} replace />;
 }
 
+/** When VITE_PRECISION_AG_ONLY=true, bounce non–Precision Ag routes to the fields home. */
+function PrecisionAgOnlyGate() {
+  const { pathname, search } = useLocation();
+  if (!PRECISION_AG_ONLY) return null;
+  if (isPrecisionAgAllowedPath(pathname)) return null;
+  return <Navigate to={precisionAgHomeUrl(search)} replace />;
+}
+
 // Redirect legacy ASP URL: /livestockmarketplace/Animals/Details.asp?ID=xxx
 function LegacyAnimalRedirect() {
   const [params] = useSearchParams();
@@ -670,8 +685,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         ) : (
         <AppShell>
         <OfflineIndicator />
+        <PrecisionAgOnlyGate />
         <Routes>
-          <Route path="/" element={<App />} />
+          <Route path="/" element={PRECISION_AG_ONLY ? <Navigate to="/dashboard" replace /> : <App />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -704,19 +720,20 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/herd-health/vet-contacts" element={<RequireAuth><HerdHealthVetContacts /></RequireAuth>} />
           <Route path="/herd-health/reproduction" element={<RequireAuth><HerdHealthReproduction /></RequireAuth>} />
           <Route path="/herd-health/reports" element={<RequireAuth><HerdHealthReports /></RequireAuth>} />
-          <Route path="/saige" element={<SaigePage />} />
+          <Route path="/saige" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <SaigePage />} />
+          <Route path="/saige/*" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <SaigePage />} />
           <Route path="/cassia" element={<CassiaPage />} />
-          <Route path="/saige/companion-planting" element={<CompanionPlanting />} />
-          <Route path="/saige/crop-names" element={<CropNames />} />
-          <Route path="/saige/weather-mitigation" element={<WeatherMitigation />} />
-          <Route path="/saige/region-crops" element={<RegionCrops />} />
-          <Route path="/saige/soil-challenges" element={<SoilChallenges />} />
-          <Route path="/saige/pest-detection" element={<PestDetection />} />
-          <Route path="/saige/price-forecast" element={<PriceForecast />} />
-          <Route path="/saige/subsidies" element={<Subsidies />} />
-          <Route path="/saige/insurance" element={<Insurance />} />
-          <Route path="/saige/push" element={<PushNotifications />} />
-          <Route path="/saige/profile" element={<SaigeProfile />} />
+          <Route path="/saige/companion-planting" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <CompanionPlanting />} />
+          <Route path="/saige/crop-names" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <CropNames />} />
+          <Route path="/saige/weather-mitigation" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <WeatherMitigation />} />
+          <Route path="/saige/region-crops" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <RegionCrops />} />
+          <Route path="/saige/soil-challenges" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <SoilChallenges />} />
+          <Route path="/saige/pest-detection" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <PestDetection />} />
+          <Route path="/saige/price-forecast" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <PriceForecast />} />
+          <Route path="/saige/subsidies" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <Subsidies />} />
+          <Route path="/saige/insurance" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <Insurance />} />
+          <Route path="/saige/push" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <PushNotifications />} />
+          <Route path="/saige/profile" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <SaigeProfile />} />
           <Route path="/oatsense" element={<RequireAuth><OatSenseRedirect /></RequireAuth>} />
           <Route path="/oatsense/crop-rotation" element={<RequireAuth><CropRotation /></RequireAuth>} />
           <Route path="/oatsense/notes" element={<RequireAuth><OatSenseNotes /></RequireAuth>} />
@@ -784,7 +801,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="/services/directory" element={<ServicesDirectory />} />
           {/* Platform services — OFN's own AI agents and offerings */}
           <Route path="/platform" element={<ServicesHome />} />
-          <Route path="/platform/saige" element={<AboutSaige />} />
+          <Route path="/platform/saige" element={PRECISION_AG_ONLY ? <SaigeComingSoon /> : <AboutSaige />} />
           <Route path="/platform/rosemarie" element={<AboutRosemarie />} />
           <Route path="/platform/pairsley" element={<AboutPairsley />} />
           <Route path="/platform/thaiyme" element={<AboutThaiyme />} />

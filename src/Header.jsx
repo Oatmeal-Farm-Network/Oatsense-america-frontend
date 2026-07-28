@@ -5,6 +5,7 @@ import { useAccount } from './AccountContext';
 import NotificationBell from './NotificationBell';
 import CartBell from './CartBell';
 import LanguageSelector from './LanguageSelector';
+import { PRECISION_AG_ONLY } from './precisionAgMode';
 
 const OTF_API = import.meta.env.VITE_OTF_API_URL || '';
 
@@ -259,12 +260,14 @@ const Header = () => {
     </svg>
   );
 
+  const homeTo = isLoggedIn ? '/dashboard' : '/';
+
   return (
     <nav className="bg-[#A3301E] py-3 px-4 shadow-2xl sticky top-0 z-10000 font-montserrat">
       <div className="max-w-350 mx-auto flex justify-between items-center">
 
         {/* Logo */}
-        <Link to={isLoggedIn ? "/dashboard" : "/"} className="flex items-center shrink-0">
+        <Link to={homeTo} className="flex items-center shrink-0">
           <img
             src="/images/Oatmeal-Farm-Network-logo-horizontal-white.webp"
             className="h-10 md:h-12"
@@ -292,7 +295,7 @@ const Header = () => {
             )}
 
             {/* Marketplaces dropdown */}
-            {nav('marketplaces') && (
+            {!PRECISION_AG_ONLY && nav('marketplaces') && (
               <li className="relative" ref={mktRef} onMouseEnter={() => setMktOpen(true)} onMouseLeave={() => setMktOpen(false)}>
                 <button onClick={() => setMktOpen(!mktOpen)} className="nav-link flex items-center gap-1 focus:outline-none">
                   {t('nav.marketplaces')} <ChevronIcon open={mktOpen} />
@@ -322,7 +325,7 @@ const Header = () => {
             )}
 
             {/* Newsroom dropdown */}
-            {nav('newsroom') && (
+            {!PRECISION_AG_ONLY && nav('newsroom') && (
               <li className="relative" ref={nrRef} onMouseEnter={() => setNrOpen(true)} onMouseLeave={() => setNrOpen(false)}>
                 <button onClick={() => setNrOpen(!nrOpen)} className="nav-link flex items-center gap-1 focus:outline-none">
                   {t('nav.newsroom')} <ChevronIcon open={nrOpen} />
@@ -345,7 +348,7 @@ const Header = () => {
               <>
                 {nav('contact') && <li><Link to="/contact-us" className="nav-link">{t('nav.contact')}</Link></li>}
                 <li className="flex items-center gap-3">
-                  <CartBell />
+                  {!PRECISION_AG_ONLY && <CartBell />}
                   <NotificationBell />
                   <LanguageSelector />
                   {/* Personal Settings dropdown */}
@@ -429,7 +432,7 @@ const Header = () => {
             )}
 
             {/* Marketplaces mobile */}
-            {nav('marketplaces') && (
+            {!PRECISION_AG_ONLY && nav('marketplaces') && (
               <li>
                 <button onClick={() => setMktMobileOpen(!mktMobileOpen)} className="!text-white flex items-center justify-center gap-1 w-full">
                   {t('nav.marketplaces')} <ChevronIcon open={mktMobileOpen} />
@@ -459,7 +462,7 @@ const Header = () => {
             )}
 
             {/* Newsroom mobile */}
-            {nav('newsroom') && (
+            {!PRECISION_AG_ONLY && nav('newsroom') && (
               <li>
                 <button onClick={() => setNrMobileOpen(!nrMobileOpen)} className="!text-white flex items-center justify-center gap-1 w-full">
                   {t('nav.newsroom')} <ChevronIcon open={nrMobileOpen} />
@@ -487,7 +490,7 @@ const Header = () => {
               <>
                 {nav('contact') && <li><Link to="/contact-us" onClick={() => setIsOpen(false)} className="nav-link block">{t('nav.contact')}</Link></li>}
                 <li className="flex items-center justify-center gap-5 pt-1">
-                  <CartBell />
+                  {!PRECISION_AG_ONLY && <CartBell />}
                   <NotificationBell />
                   <LanguageSelector />
                   <button onClick={handleLogout} title={t('nav.log_out')} className="text-white/80 hover:text-white transition-colors flex items-center">

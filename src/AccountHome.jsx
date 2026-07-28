@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import AccountLayout from './AccountLayout';
+import { PRECISION_AG_ONLY } from './precisionAgMode';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -1113,25 +1114,30 @@ export default function AccountHome() {
   if (!business || features === null || stats === null)
     return <div className="p-8 text-gray-400">Loading…</div>;
 
-  const on = (key) => features[key]?.is_enabled === true;
+  const on = (key) => {
+    if (PRECISION_AG_ONLY) return key === 'precision_ag';
+    return features[key]?.is_enabled === true;
+  };
 
   const persona = PERSONAS[BIZ_PERSONA[business.BusinessTypeID]] ?? PERSONAS.default;
 
   // Ordered active features — priority list first, then any remaining enabled
   const priorityKeys = persona.priorityFeatures.filter(k => on(k));
-  const allEnabled   = Object.keys(features).filter(k => features[k]?.is_enabled && !priorityKeys.includes(k) && FEATURE_META[k]);
-  const featureKeys  = [...priorityKeys, ...allEnabled];
+  const allEnabled   = Object.keys(features).filter(k => on(k) && !priorityKeys.includes(k) && FEATURE_META[k]);
+  const featureKeys  = PRECISION_AG_ONLY
+    ? ['precision_ag'].filter(k => FEATURE_META[k])
+    : [...priorityKeys, ...allEnabled];
 
   // Stats: up to 4 from persona priority, then fill from any non-zero
-  const statKeys = persona.statKeys.slice(0, 4);
+  const statKeys = PRECISION_AG_ONLY ? [] : persona.statKeys.slice(0, 4);
 
   // Not-enabled features for Discover section
-  const notEnabled = [
+  const notEnabled = PRECISION_AG_ONLY ? [] : [
     ...Object.keys(FEATURE_META).filter(k => !on(k)),
     ...DISCOVER_EXTRAS.filter(d => !on(d.key)).map(d => d.key),
   ].filter((v, i, a) => a.indexOf(v) === i);
 
-  const discoverItems = [
+  const discoverItems = PRECISION_AG_ONLY ? [] : [
     ...Object.entries(FEATURE_META)
       .filter(([k]) => notEnabled.includes(k))
       .map(([k, m]) => ({ key: k, label: m.label, icon: m.icon, path: m.platformPage || '/platform' })),
@@ -1200,7 +1206,7 @@ export default function AccountHome() {
         </div>
 
         {/* ── AgriERP farm ops quick-stats ── */}
-        {agriOps && (
+        {agriOps && !PRECISION_AG_ONLY && (
           <section className="rounded-2xl border border-green-200 bg-green-50 p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">

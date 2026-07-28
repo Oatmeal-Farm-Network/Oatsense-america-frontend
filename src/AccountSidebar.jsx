@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAccount } from './AccountContext';
+import { PRECISION_AG_ONLY } from './precisionAgMode';
 
 const OTF_API = import.meta.env.VITE_OTF_API_URL || import.meta.env.VITE_API_URL || '';
 
@@ -234,6 +235,8 @@ export default function AccountSidebar() {
   }, [BusinessID]);
 
   const on = (key) => {
+    // Local Precision Ag–only mode: hide every feature section except Precision Ag
+    if (PRECISION_AG_ONLY) return key === 'precision_ag';
     if (features === null) return !BusinessID;
     return features[key] === true;
   };
@@ -265,6 +268,7 @@ export default function AccountSidebar() {
       </button>
 
       {/* Over The Fence DM — always visible, above business name */}
+      {!PRECISION_AG_ONLY && (
       <div className="px-2 pt-2 shrink-0">
         <Link
           to="/over-the-fence"
@@ -275,6 +279,7 @@ export default function AccountSidebar() {
           {Expanded && <span className="grow text-left whitespace-nowrap">Over The Fence DM</span>}
         </Link>
       </div>
+      )}
 
       {/* Accounts dropdown — always visible */}
       <div className="px-2 pb-2 border-b border-gray-300/50 shrink-0">
@@ -348,7 +353,35 @@ export default function AccountSidebar() {
             </div>
 
         {/* ── Grouped feature navigation ── */}
-        {anyOn('agro_consultations','ca_storage','chilling_hours','cold_chain','compliance_audit','crop_budgeting','crop_planning','csa_advanced','csa_management','delivery_routes','enterprise_supply_chain','equipment_maint','export_compliance','farm_infrastructure','farm_inputs','farm_kpi','farm_safety','farmer_settlement','field_activity_journal','field_health_dashboard','food_aggregation','grain_bin_monitoring','harvest_bins','harvest_scheduling','hr_management','iot_greenhouse','irrigation_mgmt','livestock','nursery_management','nutrient_mgmt','outgrower_management','packhouse_qc','perishable_traceability','pest_scouting','picker_performance','plant_tagging','precision_ag','procurement','rosemarie','scale_tickets','seed_varieties','soil_tests','spray_applications','traceability','weather_dashboard','work_orders','yield_records') && (
+        {PRECISION_AG_ONLY ? (
+          on('precision_ag') && (
+            <NavSection
+              icon={ICONS.precisionAg}
+              label={t('account_sidebar.sec_precision_ag')}
+              expanded={Expanded}
+              isOpen={OpenSections['Precision Ag'] !== false}
+              onToggle={() => toggleSection('Precision Ag')}
+            >
+              <NavChild to={`/precision-ag/fields?BusinessID=${BusinessID}`} label={t('account_sidebar.ag_dashboard')} />
+              <NavChild to={`/precision-ag/crop-detection?BusinessID=${BusinessID}`} label={t('account_sidebar.crop_detection')} />
+              {fields.length > 0 && (
+                <div className="mt-1 pt-1 border-t border-gray-300/40">
+                  {fields.map(f => {
+                    const fid = f.fieldid ?? f.id;
+                    const fname = f.name ?? f.fieldname ?? f.FieldName ?? `Field ${fid}`;
+                    return (
+                      <NavChild
+                        key={fid}
+                        to={`/precision-ag/analyses?BusinessID=${BusinessID}&FieldID=${fid}`}
+                        label={fname}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </NavSection>
+          )
+        ) : anyOn('agro_consultations','ca_storage','chilling_hours','cold_chain','compliance_audit','crop_budgeting','crop_planning','csa_advanced','csa_management','delivery_routes','enterprise_supply_chain','equipment_maint','export_compliance','farm_infrastructure','farm_inputs','farm_kpi','farm_safety','farmer_settlement','field_activity_journal','field_health_dashboard','food_aggregation','grain_bin_monitoring','harvest_bins','harvest_scheduling','hr_management','iot_greenhouse','irrigation_mgmt','livestock','nursery_management','nutrient_mgmt','outgrower_management','packhouse_qc','perishable_traceability','pest_scouting','picker_performance','plant_tagging','precision_ag','procurement','rosemarie','scale_tickets','seed_varieties','soil_tests','spray_applications','traceability','weather_dashboard','work_orders','yield_records') && (
         <NavGroup icon={ICONS.navGroup} label="Farm Operations" expanded={Expanded} isOpen={OpenSections['g_farmops'] || false} onToggle={() => toggleSection('g_farmops')}>
         {on('precision_ag') && (
           <NavSection icon={ICONS.precisionAg} label={t('account_sidebar.sec_precision_ag')} expanded={Expanded}
@@ -968,6 +1001,7 @@ export default function AccountSidebar() {
         </NavGroup>
         )}
 
+        {!PRECISION_AG_ONLY && (
         <NavGroup icon={ICONS.navGroup} label="Administration" expanded={Expanded} isOpen={OpenSections['g_admin'] || false} onToggle={() => toggleSection('g_admin')}>
         <NavSection icon={ICONS.permissions} label="Roles & Permissions" expanded={Expanded}
           isOpen={OpenSections['Permissions'] || false} onToggle={() => toggleSection('Permissions')}>
@@ -985,6 +1019,7 @@ export default function AccountSidebar() {
         </NavSection>
 
         </NavGroup>
+        )}
 
           </nav>
         </>

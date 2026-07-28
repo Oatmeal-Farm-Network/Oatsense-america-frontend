@@ -9,11 +9,15 @@ import Footer from './Footer';
 import PageMeta from './PageMeta';
 import Breadcrumbs from './Breadcrumbs';
 import { useAccount } from './AccountContext';
+import { PRECISION_AG_ONLY } from './precisionAgMode';
 
 function buildServiceLinks(businessId, features, t) {
   if (!features) return null;
   const links = [];
-  const on = (key) => features[key] === true;
+  const on = (key) => {
+    if (PRECISION_AG_ONLY) return key === 'precision_ag';
+    return features[key] === true;
+  };
 
   if (on('blog'))          links.push({ label: t('dashboard.svc_blog'),              to: `/blog/manage?BusinessID=${businessId}` });
   if (on('precision_ag'))  links.push({ label: t('dashboard.svc_precision_ag'),      to: `/precision-ag/fields?BusinessID=${businessId}` });

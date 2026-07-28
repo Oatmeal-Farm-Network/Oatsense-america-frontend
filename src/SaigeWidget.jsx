@@ -1,4 +1,4 @@
-﻿/**
+/**
  * SaigeWidget — floating Saige chat bubble with voice (STT + TTS).
  *
  * Mount on any page:
@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAccount } from './AccountContext';
 import { useLanguage } from './LanguageContext';
+import { PRECISION_AG_ONLY } from './precisionAgMode';
 
 function normalizeSaigeApiBase(rawValue) {
   // Base URL already includes the /saige prefix (unified local backend mounts
@@ -902,19 +903,56 @@ export default function SaigeWidget({ businessId: propBusinessId, fieldId, pageC
         document.body,
       )}
 
-      {/* Chat panel — always mounted after first open so messages survive toggle */}
+      {/* Chat panel — Coming Soon in Precision Ag–only mode; live chat otherwise */}
       {open && createPortal(
-        <ChatPanel
-          businessId={businessId}
-          fieldId={fieldId}
-          pageContext={pageContext}
-          language={language}
-          onClose={() => setOpen(false)}
-          onFullPage={goFullPage}
-          messages={messages}
-          setMessages={setMessages}
-          ttsBackendOkRef={ttsBackendOkRef}
-        />,
+        PRECISION_AG_ONLY ? (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: 96,
+              right: 20,
+              width: 340,
+              maxWidth: 'calc(100vw - 32px)',
+              background: '#fff',
+              borderRadius: 16,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+              border: `1px solid ${SAIGE_BORDER}`,
+              zIndex: 9999,
+              fontFamily: FONT_BODY,
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ background: SAIGE_GREEN, color: '#fff', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 600, fontSize: 15 }}>Saige</span>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ padding: '28px 20px', textAlign: 'center' }}>
+              <p style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#1f2937' }}>Coming Soon</p>
+              <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
+                Saige will be available here soon.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ChatPanel
+            businessId={businessId}
+            fieldId={fieldId}
+            pageContext={pageContext}
+            language={language}
+            onClose={() => setOpen(false)}
+            onFullPage={goFullPage}
+            messages={messages}
+            setMessages={setMessages}
+            ttsBackendOkRef={ttsBackendOkRef}
+          />
+        ),
         document.body,
       )}
     </>

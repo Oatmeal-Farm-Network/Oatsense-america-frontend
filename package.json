@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:precision": "vite --mode precision-ag --host 127.0.0.1 --port 5173",
+    "dev:ofn": "vite --mode ofn --host 127.0.0.1 --port 5174",
     "build": "vite build",
+    "build:precision": "vite build --mode precision-ag",
+    "build:ofn": "vite build --mode ofn",
     "lint": "eslint .",
     "preview": "vite preview"
   },
