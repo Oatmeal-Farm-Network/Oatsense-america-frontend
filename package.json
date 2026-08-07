@@ -1,13 +1,13 @@
 {
-  "name": "oatmealfarmnetwork",
+  "name": "oatsense-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --mode precision-ag --host 127.0.0.1 --port 5173",
     "dev:precision": "vite --mode precision-ag --host 127.0.0.1 --port 5173",
     "dev:ofn": "vite --mode ofn --host 127.0.0.1 --port 5174",
-    "build": "vite build",
+    "build": "vite build --mode precision-ag",
     "build:precision": "vite build --mode precision-ag",
     "build:ofn": "vite build --mode ofn",
     "lint": "eslint .",
