@@ -1,6 +1,7 @@
 name: Deploy Oatsense Frontend Production
 
-# main → oatsense-frontend
+# main → oatsense-frontend-usa in animated-flare-421518 (Oatmeal AI) only.
+# Official Oatsense prod Cloud Run is oatsense-frontend-usa — not oatsense-frontend.
 # Fail closed until PROD_* exist. cloudbuild.yaml remains a manual fallback.
 on:
   push:
@@ -11,7 +12,7 @@ env:
   PROJECT_ID: ${{ secrets.PROD_GCP_PROJECT_ID }}
   REGION: ${{ vars.PROD_REGION || 'us-central1' }}
   GAR_REPOSITORY: ${{ vars.PROD_ARTIFACT_REGISTRY_REPOSITORY || 'cloud-run-source-deploy' }}
-  SERVICE_NAME: ${{ vars.PROD_FRONTEND_SERVICE_NAME || 'oatsense-frontend' }}
+  SERVICE_NAME: ${{ vars.PROD_FRONTEND_SERVICE_NAME || 'oatsense-frontend-usa' }}
   IMAGE_NAME: oatsense-frontend
   RUNTIME_SERVICE_ACCOUNT: ${{ vars.PROD_FRONTEND_RUNTIME_SA }}
 
@@ -42,8 +43,19 @@ jobs:
           require PROD_GCP_SERVICE_ACCOUNT "${{ secrets.PROD_GCP_SERVICE_ACCOUNT }}"
           require PROD_FRONTEND_RUNTIME_SA "${{ vars.PROD_FRONTEND_RUNTIME_SA }}"
           require PROD_API_URL "${{ vars.PROD_API_URL }}"
+          project="${{ secrets.PROD_GCP_PROJECT_ID }}"
+          service="${{ env.SERVICE_NAME }}"
+          if [ -n "$project" ] && [ "$project" != "animated-flare-421518" ]; then
+            echo "::error::PROD_GCP_PROJECT_ID must be animated-flare-421518 (Oatmeal AI). Never oatmeal-farm-staging."
+            missing=1
+          fi
+          if [ "$service" != "oatsense-frontend-usa" ]; then
+            echo "::error::Oatsense prod Cloud Run must be oatsense-frontend-usa (got: $service)."
+            missing=1
+          fi
           if [ "$missing" -ne 0 ]; then
             echo "Production deploy blocked until PROD_* are set. Do not fill them just to green this workflow."
+            echo "Official Oatsense prod service: oatsense-frontend-usa in animated-flare-421518."
             echo "cloudbuild.yaml remains the manual fallback."
             exit 1
           fi

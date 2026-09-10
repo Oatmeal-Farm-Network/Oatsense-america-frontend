@@ -26,7 +26,7 @@ See [docs/BRANCHING.md](docs/BRANCHING.md). Feature PRs go to staging only.
 |--------|-----------|----------|
 | `GCP/frontend-staging` | `oatsense-frontend-staging` | `deploy-staging.yml` (fail-closed until `STAGING_*`) |
 | `GCP/frontend-testing` | `oatsense-frontend-testing` | `deploy-testing.yml` (fail-closed until `TESTING_*`) |
-| `main` | `oatsense-frontend` | `deploy-prod.yml` (fail-closed until `PROD_*`) |
+| `main` | **`oatsense-frontend-usa`** (`animated-flare-421518`) | `deploy-prod.yml` (fail-closed until `PROD_*`) |
 
 ## Cloud Build / Cloud Run
 
@@ -34,7 +34,7 @@ See [docs/BRANCHING.md](docs/BRANCHING.md). Feature PRs go to staging only.
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml .
-gcloud run deploy oatsense-frontend \
+gcloud run deploy oatsense-frontend-usa \
   --image us-central1-docker.pkg.dev/animated-flare-421518/cloud-run-source-deploy/oatsense-frontend \
   --region us-central1 --platform managed --allow-unauthenticated --port 8080
 ```
