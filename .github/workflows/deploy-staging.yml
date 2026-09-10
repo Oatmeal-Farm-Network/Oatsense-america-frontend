@@ -1,0 +1,105 @@
+name: Deploy Oatsense Frontend Staging
+
+# GCP/frontend-staging → oatsense-frontend-staging
+# Bake STAGING_* only. Fail closed until staging Cloud Run and vars exist.
+on:
+  push:
+    branches: [GCP/frontend-staging]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.STAGING_GCP_PROJECT_ID }}
+  REGION: ${{ vars.STAGING_REGION || 'us-central1' }}
+  GAR_REPOSITORY: ${{ vars.STAGING_ARTIFACT_REGISTRY_REPOSITORY || 'oatmeal-farm-registry' }}
+  SERVICE_NAME: oatsense-frontend-staging
+  IMAGE_NAME: oatsense-frontend
+  RUNTIME_SERVICE_ACCOUNT: ${{ vars.STAGING_FRONTEND_RUNTIME_SA }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require staging secrets and bake vars
+        shell: bash
+        run: |
+          missing=0
+          require() {
+            local name="$1" value="$2"
+            if [ -z "$value" ]; then
+              echo "::error::Missing required GitHub Actions secret/variable: $name"
+              missing=1
+            fi
+          }
+          require STAGING_GCP_PROJECT_ID "${{ secrets.STAGING_GCP_PROJECT_ID }}"
+          require STAGING_GCP_WORKLOAD_IDENTITY_PROVIDER "${{ secrets.STAGING_GCP_WORKLOAD_IDENTITY_PROVIDER }}"
+          require STAGING_GCP_SERVICE_ACCOUNT "${{ secrets.STAGING_GCP_SERVICE_ACCOUNT }}"
+          require STAGING_FRONTEND_RUNTIME_SA "${{ vars.STAGING_FRONTEND_RUNTIME_SA }}"
+          require STAGING_API_URL "${{ vars.STAGING_API_URL }}"
+          if [ "$missing" -ne 0 ]; then
+            echo "Staging deploy blocked. Create oatsense-frontend-staging and set STAGING_API_URL (oatsense BFF or OFN staging API — pick one, do not mix prod)."
+            exit 1
+          fi
+
+      - name: Derive commit SHA tag
+        run: echo "COMMIT_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.STAGING_GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.STAGING_GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build Docker image (bake staging VITE_*)
+        env:
+          VITE_API_URL: ${{ vars.STAGING_API_URL }}
+          VITE_CROP_API_URL: ${{ vars.STAGING_CROP_API_URL }}
+          VITE_SAIGE_API_URL: ${{ vars.STAGING_SAIGE_URL }}
+          VITE_NEWS_API_URL: ${{ vars.STAGING_NEWS_API_URL }}
+          VITE_OTF_API_URL: ${{ vars.STAGING_OTF_API_URL }}
+          VITE_CONTACT_RECIPIENT_EMAIL: ${{ vars.STAGING_CONTACT_EMAIL }}
+        run: |
+          docker build \
+            --build-arg "VITE_API_URL=${VITE_API_URL}" \
+            --build-arg "VITE_CROP_API_URL=${VITE_CROP_API_URL}" \
+            --build-arg "VITE_SAIGE_API_URL=${VITE_SAIGE_API_URL}" \
+            --build-arg "VITE_NEWS_API_URL=${VITE_NEWS_API_URL}" \
+            --build-arg "VITE_OTF_API_URL=${VITE_OTF_API_URL}" \
+            --build-arg "VITE_CONTACT_RECIPIENT_EMAIL=${VITE_CONTACT_RECIPIENT_EMAIL}" \
+            --build-arg "VITE_PRECISION_AG_ONLY=true" \
+            -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${IMAGE_NAME}:${COMMIT_SHA}" \
+            .
+
+      - run: docker push "${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${IMAGE_NAME}:${COMMIT_SHA}"
+
+      - name: Deploy to Cloud Run (staging)
+        run: |
+          gcloud run deploy "${SERVICE_NAME}" \
+            --image "${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${IMAGE_NAME}:${COMMIT_SHA}" \
+            --region "${REGION}" \
+            --project "${PROJECT_ID}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 5 \
+            --service-account "${RUNTIME_SERVICE_ACCOUNT}" \
+            --quiet
+
+      - name: Show deployed URL
+        run: |
+          gcloud run services describe "${SERVICE_NAME}" \
+            --region "${REGION}" \
+            --project "${PROJECT_ID}" \
+            --format='value(status.url)'

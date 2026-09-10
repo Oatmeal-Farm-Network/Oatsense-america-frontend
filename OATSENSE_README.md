@@ -14,7 +14,23 @@ npm run dev:precision
 
 Requires main backend on `http://127.0.0.1:8000` (see `.env.precision-ag`).
 
+## Git train
+
+```text
+feature/*  →  GCP/frontend-staging  →  GCP/frontend-testing  →  main
+```
+
+See [docs/BRANCHING.md](docs/BRANCHING.md). Feature PRs go to staging only.
+
+| Branch | Cloud Run | Workflow |
+|--------|-----------|----------|
+| `GCP/frontend-staging` | `oatsense-frontend-staging` | `deploy-staging.yml` (fail-closed until `STAGING_*`) |
+| `GCP/frontend-testing` | `oatsense-frontend-testing` | `deploy-testing.yml` (fail-closed until `TESTING_*`) |
+| `main` | `oatsense-frontend` | `deploy-prod.yml` (fail-closed until `PROD_*`) |
+
 ## Cloud Build / Cloud Run
+
+`cloudbuild.yaml` remains the production fallback until Actions prod CD is enabled.
 
 ```bash
 gcloud builds submit --config cloudbuild.yaml .
@@ -24,7 +40,7 @@ gcloud run deploy oatsense-frontend \
 ```
 
 `VITE_PRECISION_AG_ONLY=true` — non–Precision Ag routes redirect into Precision Ag.  
-`_API_URL` in `cloudbuild.yaml` must stay the **main** backend URL.
+Bake `STAGING_API_URL` / `TESTING_API_URL` / `PROD_API_URL` per hop. Do not mix a non-prod frontend with the production API.
 
 ## Field Twin note
 
