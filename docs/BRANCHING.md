@@ -21,4 +21,4 @@ Allowed PRs only: work → staging; staging → testing; testing → `main`.
 
 Staging and testing Actions stay fail-closed until `STAGING_*` / `TESTING_*` and Cloud Run exist in `oatmeal-farm-staging`. Staging WIF `github-pool` must trust this repo before Actions can authenticate.
 
-Production stays fail-closed until `PROD_*` exist. `cloudbuild.yaml` remains the production fallback. Do not fill `PROD_*` just to green a workflow.
+Merge to `main` deploys `oatsense-frontend-usa` in Oatmeal AI (needs prod WIF on this repo). `cloudbuild.yaml` remains a fallback. Testing/staging Actions stay fail-closed until those Cloud Run services and WIF trust exist.
