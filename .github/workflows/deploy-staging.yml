@@ -42,8 +42,13 @@ jobs:
           require STAGING_GCP_SERVICE_ACCOUNT "${{ secrets.STAGING_GCP_SERVICE_ACCOUNT }}"
           require STAGING_FRONTEND_RUNTIME_SA "${{ vars.STAGING_FRONTEND_RUNTIME_SA }}"
           require STAGING_API_URL "${{ vars.STAGING_API_URL }}"
+          project="${{ secrets.STAGING_GCP_PROJECT_ID }}"
+          if [ -n "$project" ] && [ "$project" != "oatmeal-farm-staging" ]; then
+            echo "::error::STAGING_GCP_PROJECT_ID must be oatmeal-farm-staging. Never animated-flare-421518 (Oatmeal AI)."
+            missing=1
+          fi
           if [ "$missing" -ne 0 ]; then
-            echo "Staging deploy blocked. Create oatsense-frontend-staging and set STAGING_API_URL (oatsense BFF or OFN staging API — pick one, do not mix prod)."
+            echo "Staging deploy blocked. Create oatsense-frontend-staging in oatmeal-farm-staging and set STAGING_API_URL (oatsense BFF or OFN staging API — pick one, do not mix prod)."
             exit 1
           fi
 
