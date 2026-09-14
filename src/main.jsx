@@ -610,10 +610,20 @@ function AccountEventsRedirect() {
   return <Navigate to={`/events/manage${qs ? `?${qs}` : ''}`} replace />;
 }
 
-// Custom domains (not OFN or localhost) get the full public site renderer for every path.
-const OFN_HOSTS = ['oatmealfarmnetwork.com', 'www.oatmealfarmnetwork.com', 'localhost', '127.0.0.1'];
-const isCustomDomain = !OFN_HOSTS.some(
-  h => window.location.hostname === h || window.location.hostname.endsWith(`.${h}`)
+// Custom domains (not platform or localhost) get the full public site renderer for every path.
+const OFN_HOSTS = [
+  'oatmealfarmnetwork.com',
+  'www.oatmealfarmnetwork.com',
+  'localhost',
+  '127.0.0.1',
+];
+const isCustomDomain = !(
+  OFN_HOSTS.some(
+    h => window.location.hostname === h || window.location.hostname.endsWith(`.${h}`)
+  )
+  || window.location.hostname.startsWith('oatsense-frontend-staging')
+  || window.location.hostname.startsWith('oatsense-frontend-testing')
+  || window.location.hostname.startsWith('oatsense-frontend-usa')
 );
 
 // Register the unified service worker (push + offline + bg-sync) on first paint.
