@@ -2207,9 +2207,19 @@ function RenderBlock({ block, site, businessId }) {
   }
 }
 
-// Hostnames that are the OFN platform itself — everything else is a custom domain
-const OFN_HOSTS = ['oatmealfarmnetwork.com', 'www.oatmealfarmnetwork.com', 'localhost', '127.0.0.1'];
-const isCustomDomain = !OFN_HOSTS.some(h => window.location.hostname === h || window.location.hostname.endsWith(`.${h}`));
+// Hostnames that are the platform itself — everything else is a custom domain
+const OFN_HOSTS = [
+  'oatmealfarmnetwork.com',
+  'www.oatmealfarmnetwork.com',
+  'localhost',
+  '127.0.0.1',
+];
+const isCustomDomain = !(
+  OFN_HOSTS.some(h => window.location.hostname === h || window.location.hostname.endsWith(`.${h}`))
+  || window.location.hostname.startsWith('oatsense-frontend-staging')
+  || window.location.hostname.startsWith('oatsense-frontend-testing')
+  || window.location.hostname.startsWith('oatsense-frontend-usa')
+);
 
 // Pick the header image whose month/day range covers today.
 // Falls back to header_banner_url if no images are configured.
