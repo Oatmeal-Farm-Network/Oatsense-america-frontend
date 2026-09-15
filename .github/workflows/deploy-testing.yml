@@ -1,4 +1,6 @@
 name: Deploy Oatsense Frontend Testing
+# RETIRED_TESTING: use deploy-development instead. Kept for rollback.
+if: false  # retired — testing env cut over to development
 
 # GCP/frontend-testing → oatsense-frontend-testing in oatmeal-farm-staging.
 # Fall back to staging WIF/URLs. github-pool does not currently trust this repo;
