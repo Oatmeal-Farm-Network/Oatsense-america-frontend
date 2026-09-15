@@ -1,24 +1,25 @@
-# Oatsense frontend — Git train
+# Branching train
 
-This repo follows the Oatmeal AI three-environment train. Do not rename these branches.
+**Train:** `feature/* → GCP/*-development → GCP/*-staging → main`
 
-```text
-feature/*  →  PR  →  GCP/frontend-staging  →  PR  →  GCP/frontend-testing  →  PR  →  main
-                         staging Cloud Run              testing Cloud Run              production
-```
+| Branch | Role |
+|--------|------|
+| `feature/*` | Work in progress |
+| `GCP/*-development` | Development (land features here first) |
+| `GCP/*-staging` | QA / UAT / pre-prod only (from development) |
+| `main` | Production (from staging only) |
 
-| Branch | Cloud Run | GCP project | Workflow |
-|--------|-----------|-------------|----------|
-| `GCP/frontend-staging` | `oatsense-frontend-staging` | `oatmeal-farm-staging` | `deploy-staging.yml` |
-| `GCP/frontend-testing` | `oatsense-frontend-testing` | `oatmeal-farm-staging` | `deploy-testing.yml` |
-| `main` | **`oatsense-frontend-usa`** | `animated-flare-421518` (Oatmeal AI) | `deploy-prod.yml` |
+## Rules
 
-Official Oatsense production Cloud Run is **`oatsense-frontend-usa`**. Do not invent `oatsense-frontend`.
+- Do **not** open feature PRs into staging or main.
+- Staging accepts PRs **only** from `GCP/*-development`.
+- Main accepts PRs **only** from `GCP/*-staging`.
+- `GCP/*-testing` is **retired** — use development instead. Existing testing branches/services remain for a grace period; new PRs to testing are blocked by `train-direction`.
 
-Allowed PRs only: work → staging; staging → testing; testing → `main`.
+## Deploys
 
-`VITE_API_URL` is baked per environment (`STAGING_API_URL` / `TESTING_API_URL` / `PROD_API_URL`). Do not mix a staging frontend with a production API.
+- Push to `GCP/*-development` → `*-development` Cloud Run (`oatmeal-farm-staging`)
+- Push to `GCP/*-staging` → `*-staging` Cloud Run
+- Push to `main` → production Cloud Run (`animated-flare-421518`) via GitHub Actions (not Cloud Build)
 
-Staging and testing Actions stay fail-closed until `STAGING_*` / `TESTING_*` and Cloud Run exist in `oatmeal-farm-staging`. Staging WIF `github-pool` must trust this repo before Actions can authenticate.
-
-Merge to `main` deploys `oatsense-frontend-usa` in Oatmeal AI (needs prod WIF on this repo). `cloudbuild.yaml` remains a fallback. Testing/staging Actions stay fail-closed until those Cloud Run services and WIF trust exist.
+Updated: 2026-09-15 UTC
