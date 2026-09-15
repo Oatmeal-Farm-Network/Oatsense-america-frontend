@@ -1,0 +1,136 @@
+name: Deploy Oatsense Frontend Development
+
+# GCP/frontend-development → oatsense-frontend-development in oatmeal-farm-staging.
+# Fall back to staging WIF/URLs. github-pool does not currently trust this repo;
+# skip (do not fail) when WIF is missing or auth is rejected.
+on:
+  push:
+    branches: ['GCP/frontend-development']
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.DEVELOPMENT_GCP_PROJECT_ID || secrets.STAGING_GCP_PROJECT_ID || 'oatmeal-farm-staging' }}
+  REGION: ${{ vars.DEVELOPMENT_REGION || vars.STAGING_REGION || 'us-central1' }}
+  GAR_REPOSITORY: ${{ vars.DEVELOPMENT_ARTIFACT_REGISTRY_REPOSITORY || vars.STAGING_ARTIFACT_REGISTRY_REPOSITORY || 'oatmeal-farm-registry' }}
+  SERVICE_NAME: oatsense-frontend-development
+  IMAGE_NAME: oatsense-frontend
+  RUNTIME_SERVICE_ACCOUNT: ${{ vars.DEVELOPMENT_FRONTEND_RUNTIME_SA || vars.STAGING_FRONTEND_RUNTIME_SA || 'frontend-sa@oatmeal-farm-staging.iam.gserviceaccount.com' }}
+
+jobs:
+  check-development-wif:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - name: Check development or staging WIF
+        id: check
+        shell: bash
+        run: |
+          provider="${{ secrets.DEVELOPMENT_GCP_WORKLOAD_IDENTITY_PROVIDER }}${{ secrets.STAGING_GCP_WORKLOAD_IDENTITY_PROVIDER }}"
+          sa="${{ secrets.DEVELOPMENT_GCP_SERVICE_ACCOUNT }}${{ secrets.STAGING_GCP_SERVICE_ACCOUNT }}"
+          if [ -n "$provider" ] && [ -n "$sa" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No DEVELOPMENT_* or STAGING_* WIF secrets, or Oatsense-america-frontend is not in github-pool. Skipping development deploy."
+          fi
+
+  deploy:
+    needs: check-development-wif
+    if: needs.check-development-wif.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard development project
+        shell: bash
+        run: |
+          project="${PROJECT_ID}"
+          if [ "$project" = "animated-flare-421518" ]; then
+            echo "::error::DEVELOPMENT_GCP_PROJECT_ID must be oatmeal-farm-staging. Never animated-flare-421518 (Oatmeal AI)."
+            exit 1
+          fi
+          echo "Development deploy project=${project} service=${SERVICE_NAME}"
+
+      - name: Derive commit SHA tag
+        run: echo "COMMIT_SHA=${GITHUB_SHA::12}" >> "$GITHUB_ENV"
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        continue-on-error: true
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.DEVELOPMENT_GCP_WORKLOAD_IDENTITY_PROVIDER || secrets.STAGING_GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.DEVELOPMENT_GCP_SERVICE_ACCOUNT || secrets.STAGING_GCP_SERVICE_ACCOUNT }}
+
+      - name: Skip remaining steps if WIF rejected this repo
+        if: steps.auth.outcome == 'failure'
+        run: |
+          echo "::notice::Staging/testing WIF did not trust Oatsense-america-frontend. Add this repo to github-pool, then re-run."
+          echo "skip=true" >> "$GITHUB_ENV"
+
+      - uses: google-github-actions/setup-gcloud@v2
+        if: env.skip != 'true'
+
+      - name: Configure Docker for Artifact Registry
+        if: env.skip != 'true'
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build Docker image (bake testing VITE_*)
+        if: env.skip != 'true'
+        env:
+          VITE_API_URL: ${{ vars.DEVELOPMENT_API_URL || vars.STAGING_API_URL || 'https://oatmeal-backend-staging-1087130530284.us-central1.run.app' }}
+          VITE_CROP_API_URL: ${{ vars.DEVELOPMENT_CROP_API_URL || vars.STAGING_CROP_API_URL || 'https://oatmeal-backend-staging-1087130530284.us-central1.run.app/cm' }}
+          VITE_SAIGE_API_URL: ${{ vars.DEVELOPMENT_SAIGE_URL || vars.STAGING_SAIGE_URL || 'https://oatmeal-saige-staging-lrviw4iujq-uc.a.run.app' }}
+          VITE_NEWS_API_URL: ${{ vars.DEVELOPMENT_NEWS_API_URL || vars.STAGING_NEWS_API_URL || 'https://oatmeal-backend-staging-1087130530284.us-central1.run.app' }}
+          VITE_OTF_API_URL: ${{ vars.DEVELOPMENT_OTF_API_URL || vars.STAGING_OTF_API_URL }}
+          VITE_CONTACT_RECIPIENT_EMAIL: ${{ vars.DEVELOPMENT_CONTACT_EMAIL || vars.STAGING_CONTACT_EMAIL }}
+        run: |
+          docker build \
+            --build-arg "VITE_API_URL=${VITE_API_URL}" \
+            --build-arg "VITE_CROP_API_URL=${VITE_CROP_API_URL}" \
+            --build-arg "VITE_SAIGE_API_URL=${VITE_SAIGE_API_URL}" \
+            --build-arg "VITE_NEWS_API_URL=${VITE_NEWS_API_URL}" \
+            --build-arg "VITE_OTF_API_URL=${VITE_OTF_API_URL}" \
+            --build-arg "VITE_CONTACT_RECIPIENT_EMAIL=${VITE_CONTACT_RECIPIENT_EMAIL}" \
+            --build-arg "VITE_PRECISION_AG_ONLY=true" \
+            -t "${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${IMAGE_NAME}:${COMMIT_SHA}" \
+            .
+
+      - name: Push Docker image
+        if: env.skip != 'true'
+        run: docker push "${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${IMAGE_NAME}:${COMMIT_SHA}"
+
+      - name: Deploy to Cloud Run (testing)
+        if: env.skip != 'true'
+        run: |
+          extra=()
+          if [ -n "${RUNTIME_SERVICE_ACCOUNT}" ]; then
+            extra+=(--service-account "${RUNTIME_SERVICE_ACCOUNT}")
+          fi
+          gcloud run deploy "${SERVICE_NAME}" \
+            --image "${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_REPOSITORY}/${IMAGE_NAME}:${COMMIT_SHA}" \
+            --region "${REGION}" \
+            --project "${PROJECT_ID}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 5 \
+            "${extra[@]}" \
+            --quiet
+
+      - name: Show deployed URL
+        if: env.skip != 'true'
+        run: |
+          gcloud run services describe "${SERVICE_NAME}" \
+            --region "${REGION}" \
+            --project "${PROJECT_ID}" \
+            --format='value(status.url)'
