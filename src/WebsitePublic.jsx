@@ -2216,6 +2216,7 @@ const OFN_HOSTS = [
 ];
 const isCustomDomain = !(
   OFN_HOSTS.some(h => window.location.hostname === h || window.location.hostname.endsWith(`.${h}`))
+  || window.location.hostname.startsWith('oatsense-frontend-development')
   || window.location.hostname.startsWith('oatsense-frontend-staging')
   || window.location.hostname.startsWith('oatsense-frontend-testing')
   || window.location.hostname.startsWith('oatsense-frontend-usa')
